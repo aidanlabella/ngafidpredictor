@@ -10,23 +10,8 @@ from loguru import logger
 
 logger.add("{time}.log")
 
-parser = argparse.ArgumentParser("Hard Negative Miner")
-parser.add_argument(
-    "--inputdirectory",
-    type=str,
-    default="example_flights",
-    help="location of csv containing data to import",
-)
 
-if __name__ == "__main__":
-    args = parser.parse_args()
-
-    logger.info('Looking for csvs in %s' % args.inputdirectory)
-
-    directory = args.inputdirectory + '/*C172*.csv'
-
-    filenames = glob.glob(directory)
-
+def run_predictor(filenames):
     logger.info('Found %i csvs' % len(filenames))
 
     pp = PreProcessor('scaler.pkl')
