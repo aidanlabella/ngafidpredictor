@@ -10,8 +10,11 @@ from loguru import logger
 
 logger.add("{time}.log")
 
+def process(directory):
+    directory = directory + '/*.csv'
 
-def run_predictor(filenames):
+    filenames = glob.glob(directory)
+
     logger.info('Found %i csvs' % len(filenames))
 
     pp = PreProcessor('scaler.pkl')

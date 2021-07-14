@@ -2,8 +2,11 @@
 
 from loguru import logger
 from zipfile import ZipFile
+from main import process
+
 import os
 import mysql.connector
+import math
 
 def connect():
     db_info_file = open(os.environ['NGAFID_DB_INFO'], "r")
@@ -32,12 +35,36 @@ def connect():
         password=pw
     )
 
+def bin_search(li, name):
+    length = len(li)
+    piv = math.floor(length / 2)
+
+    if length > 1:
+        if name > li[piv]:
+            return bin_search(li[piv:length], name)
+        elif name < li[piv]:
+            return bin_search(li[0:piv], name)
+        else:
+            return name == li[piv]
+    else:
+        return name == li[piv]
+
+
+
 if __name__ == "__main__":
     logger.info('Connecting to NGAFID db')
     connection = connect()
 
     cursor = connection.cursor()
-    # cursor.execute("SELECT id, filename FROM flights WHERE maintenance_probability < 0 AND airframe_id = (SELECT id FROM airframes WHERE airframe = 'Cessna 172S')")
+    cursor.execute("SELECT id, filename FROM flights WHERE maintenance_probability < 0 AND airframe_id = (SELECT id FROM airframes WHERE airframe = 'Cessna 172S')")
+
+    c172_files = []
+    rs = cursor.fetchall() 
+    for r in rs:
+        print(r[1])
+        c172_files.append(r[1])
+
+    c172_files.sort()
 
     cursor.execute("SELECT fleet_id, uploader_id, id, filename FROM uploads");
 
@@ -50,5 +77,19 @@ if __name__ == "__main__":
         zip_path = dir_prefix + str(r[0]) + "/" + str(r[1]) + "/" + str(r[2]) + "__" + r[3]
         zip_files.append(ZipFile(zip_path, "r"))
 
+    # TODO: create dir for unzipped csvs
+    os.mkdir("csvs")
+
+    count = 0
     for zipfile in zip_files:
-        zipfile.printdir()
+        for info in zipfile.infolist():
+            if bin_search(c172_files, info.filename):
+                logger.info("Extracting: " + info.filename)
+                zipfile.extract(member = info, path = "csvs")
+                count = count + 1
+
+
+    logger.info("Found " + str(count) + " C172 flights to process")
+    process("csvs")
+
+
